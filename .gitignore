@@ -1,0 +1,39 @@
+# Secrets / environment
+*.env
+*.env.*
+.env*
+
+# Runtime databases (contain user PII — emails, sessions, downloads)
+*.sqlite
+*.sqlite3
+*.db
+
+# Runtime/generated data, logs, caches
+*.log
+data/*.cache.json
+data/*_cache.json
+api/app_data/oauth_states/
+chat/sessions/
+chat/resumes/
+uploads/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+
+# but keep the template
+!.env.example
+
+# Server-side manual-edit leftovers / scratch files
+*.xpix.*
+*.bak
+*.orig
+*~
+
+# Geo lookup cache (regenerated at runtime, holds visitor geo data)
+a/geo/ipapi_cache.json
+
+# Pinterest CAPI credentials (plain-array config, not an .env key)
+data/pinterest_capi.php
+!data/pinterest_capi.php.example
+

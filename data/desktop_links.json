@@ -1,0 +1,12 @@
+{
+  "windows": {
+    "url": "https://www.dropbox.com/scl/fi/wlomplagfsrc3u9n7p50q/NeuraVision-Studio-4.2.1.msi?rlkey=du7kote6r8a1txk856cs82w2g&st=3s7tvzr8&dl=1",
+    "keepName": true,
+    "customName": ""
+  },
+  "macos": {
+    "url": "https://www.dropbox.com/scl/fi/dt7jjph934gexhyr5ax87/NeuraVision-Studio.dmg?rlkey=pdl9tuayrl8lm1yke90ogclhz&dl=1",
+    "keepName": true,
+    "customName": ""
+  }
+}

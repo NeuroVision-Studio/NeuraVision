@@ -1,0 +1,4 @@
+<?php
+// Copy to data/pinterest_capi.php (git-ignored) and fill in real values.
+// functions/pinterest_capi.php silently no-ops if this file is absent.
+return ['ad_account_id' => '', 'token' => ''];

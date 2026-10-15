@@ -1,0 +1,30 @@
+# Normalise line endings for text, leave binaries alone
+* text=auto eol=lf
+
+*.php   text diff=php
+*.js    text
+*.css   text
+*.json  text
+*.md    text
+*.html  text
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.mp4  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+
+# Keep language stats meaningful: vendored / generated code is not "ours"
+PHPMailer/**            linguist-vendored
+a/vendor/**             linguist-vendored
+assets/**               linguist-documentation=false linguist-detectable=false
+lp/assets/**            linguist-detectable=false
+includes/nv_i18n/dict/** linguist-generated
+
+# PHP files are PHP, not Hack (GitHub misdetects some)
+*.php linguist-language=PHP

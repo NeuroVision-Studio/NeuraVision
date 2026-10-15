@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cash Top Analytics</title>
+<link rel="stylesheet" href="rrweb-player.min.css">
+<style>
+  :root{
+    color-scheme: dark;
+    --surface-0:#111110; --surface-1:#1a1a19; --surface-2:#232321;
+    --border:#34332f; --text-primary:#ffffff; --text-secondary:#c3c2b7;
+    --text-muted:#8b8a80;
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+    --series-4:#c98500; --series-5:#d55181; --series-6:#9085e9;
+    --accent:#3987e5;
+  }
+  :root[data-theme="light"]{
+    color-scheme: light;
+    --surface-0:#f4f4f2; --surface-1:#fcfcfb; --surface-2:#ffffff;
+    --border:#e2e1dc; --text-primary:#0b0b0b; --text-secondary:#52514e;
+    --text-muted:#8b8a80;
+    --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a;
+    --series-4:#eda100; --series-5:#e87ba4; --series-6:#4a3aa7;
+    --accent:#2a78d6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-0);color:var(--text-primary);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding:14px 20px;background:var(--surface-1);border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:20;}
+  header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .sp{flex:1}
+  select,button{font:inherit;color:var(--text-primary);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer}
+  button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  main{padding:20px;max-width:1200px;margin:0 auto}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+  .kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .kpi .v{font-size:28px;font-weight:680;letter-spacing:-.5px}
+  .kpi .l{color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .card h3{margin:0 0 14px;font-size:13px;font-weight:620;color:var(--text-secondary);
+    text-transform:uppercase;letter-spacing:.6px}
+  .bar-row{display:grid;grid-template-columns:140px 1fr 56px;align-items:center;gap:10px;margin:7px 0}
+  .bar-row .lab{color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+  .bar-track{display:block;width:100%;background:var(--surface-2);border-radius:5px;height:18px;overflow:hidden}
+  .bar-fill{display:block;height:100%;border-radius:5px;min-width:2px}
+  .bar-row .num{text-align:right;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+  .hidden{display:none}
+  /* heatmap */
+  .hm-wrap{position:relative;max-width:900px;margin:0 auto;border:1px solid var(--border);
+    border-radius:10px;overflow:hidden;background:var(--surface-2)}
+  .hm-wrap img{display:block;width:100%}
+  .hm-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .hm-controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .legend{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:12px}
+  .legend .ramp{width:140px;height:10px;border-radius:5px;
+    background:linear-gradient(90deg,#2b4bd6,#1baf7a,#eda100,#e34948)}
+  .note{color:var(--text-muted);font-size:12.5px;margin:10px auto;max-width:900px}
+  /* sessions */
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);font-size:13px}
+  th{color:var(--text-muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+  tr:hover td{background:var(--surface-2)}
+  .play-btn{padding:4px 12px;font-size:12px;border-radius:6px}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;background:var(--surface-2);
+    border:1px solid var(--border);font-size:11px;color:var(--text-secondary)}
+  #overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;display:none;
+    align-items:center;justify-content:center;padding:20px}
+  #overlay .box{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;
+    padding:16px;max-width:95vw;max-height:92vh;overflow:auto}
+  #overlay h3{margin:0 0 12px;font-size:14px}
+  .close{float:right}
+  .empty{color:var(--text-muted);padding:30px;text-align:center}
+  .flag{font-size:16px;margin-right:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cash Top Analytics</h1>
+  <select id="site"></select>
+  <button id="refresh" title="Reload data">↻ Refresh</button>
+  <span class="sp"></span>
+  <button id="theme" title="Toggle theme">◐ Theme</button>
+</header>
+<main>
+  <div class="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="heatmap">Heatmaps</button>
+    <button data-tab="sessions">Session recordings</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="tab-overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="card"><h3>Countries (by sessions)</h3><div id="c-countries"></div></div>
+      <div class="card"><h3>Devices</h3><div id="c-devices"></div></div>
+      <div class="card"><h3>Traffic sources</h3><div id="c-sources"></div></div>
+      <div class="card" style="grid-column:1/-1"><h3>Creatives (ref label)</h3><div id="c-creatives"></div></div>
+      <div class="card"><h3>Referrers</h3><div id="c-referrers"></div></div>
+      <div class="card"><h3>Scroll-depth reach</h3><div id="c-scroll"></div></div>
+      <div class="card" style="grid-column:1/-1"><h3>Top clicked elements</h3><div id="c-clicks"></div></div>
+    </div>
+  </section>
+
+  <!-- HEATMAP -->
+  <section id="tab-heatmap" class="hidden">
+    <div class="hm-controls">
+      <button data-hm="click" class="active">Click heatmap</button>
+      <button data-hm="move">Mouse-move heatmap</button>
+      <button data-hm="scroll">Scroll heatmap</button>
+      <span class="sp" style="flex:1"></span>
+      <span class="legend"><span>low</span><span class="ramp"></span><span>high</span></span>
+    </div>
+    <div class="hm-wrap" id="hm-wrap">
+      <img id="hm-img" alt="page snapshot" />
+      <canvas class="hm-canvas" id="hm-canvas"></canvas>
+    </div>
+    <p class="note" id="hm-note"></p>
+  </section>
+
+  <!-- SESSIONS -->
+  <section id="tab-sessions" class="hidden">
+    <div class="card">
+      <h3>Recorded sessions</h3>
+      <div id="sessions-body"></div>
+    </div>
+  </section>
+</main>
+
+<div id="overlay"><div class="box">
+  <button class="close" id="ovl-close">✕ Close</button>
+  <h3 id="ovl-title">Session replay</h3>
+  <div id="player"></div>
+</div></div>
+
+<script src="rrweb-player.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = v => String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SERIES = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6'];
+const qs = new URLSearchParams(location.search);
+const TOKEN = qs.get('token') || '';
+function api(path, extra){
+  const u = new URL(path, location.href);
+  if (TOKEN) u.searchParams.set('token', TOKEN);
+  if (extra) Object.entries(extra).forEach(([k,v])=>u.searchParams.set(k,v));
+  return fetch(u).then(r=>r.json());
+}
+let SITE = qs.get('site') || '';
+
+// ---- theme toggle
+$('#theme').onclick = ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', cur==='light'?'dark':'light');
+  if (CUR_OV) renderHeat();
+};
+
+// ---- tabs
+document.querySelectorAll('.tabs button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    ['overview','heatmap','sessions'].forEach(t=>$('#tab-'+t).classList.toggle('hidden', t!==b.dataset.tab));
+    if(b.dataset.tab==='heatmap') renderHeat();
+  };
+});
+
+function flagEmoji(cc){
+  if(!cc || cc.length!==2) return '🏳️';
+  const A=0x1F1E6;
+  return String.fromCodePoint(A + cc.charCodeAt(0)-65, A + cc.charCodeAt(1)-65);
+}
+
+function bars(el, rows, opts){
+  opts = opts||{};
+  const max = Math.max(1, ...rows.map(r=>r.value));
+  const total = rows.reduce((a,r)=>a+r.value,0) || 1;
+  el.innerHTML = rows.length ? rows.map((r,i)=>{
+    const color = `var(${SERIES[i%SERIES.length]})`;
+    const pct = (r.value/total*100);
+    const w = (r.value/max*100);
+    const right = opts.showPct ? pct.toFixed(0)+'%' : r.value;
+    return `<div class="bar-row" title="${r.label}: ${r.value} (${pct.toFixed(1)}%)">
+      <span class="lab">${r.icon||''}${r.label}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${w}%;background:${color}"></span></span>
+      <span class="num">${right}</span></div>`;
+  }).join('') : '<div class="empty">No data yet</div>';
+}
+
+async function loadSites(){
+  const sites = await api('api/sites');
+  const sel = $('#site');
+  sel.innerHTML = sites.map(s=>`<option value="${s.site}">${s.site==='*all'?'All landings':s.site} (${s.sessions})</option>`).join('')
+    || '<option value="">(no sites)</option>';
+  if(!SITE && sites.length) SITE = sites[0].site;
+  if(SITE) sel.value = SITE;
+  sel.onchange = ()=>{ SITE = sel.value; loadAll(); };
+}
+
+async function loadOverview(){
+  const o = await api('api/overview', {site:SITE});
+  $('#kpis').innerHTML = [
+    ['Pageviews', o.pageviews],
+    ['Sessions', o.sessions],
+    ['Unique visitors', o.uniques],
+    ['Avg time on page', (o.avg_time_on_page||0)+'s'],
+  ].map(([l,v])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  bars($('#c-countries'), (o.countries||[]).map(c=>({
+    label:c.name||c.code||'Unknown', value:c.count, icon:`<span class="flag">${flagEmoji(c.code)}</span>`
+  })), {showPct:true});
+  bars($('#c-devices'), Object.entries(o.devices||{}).map(([k,v])=>({label:k,value:v})), {showPct:true});
+  bars($('#c-sources'), (o.sources||[]).map(r=>({label:r.label,value:r.sessions})), {showPct:true});
+  const cr = o.creatives||[];
+  $('#c-creatives').innerHTML = !cr.length ? '<div class="empty">No visits with a ?ref= label yet</div>' :
+    `<table><thead><tr><th>Creative (ref)</th><th>Source</th><th>Sessions</th><th>Unique</th>
+     <th>Avg time</th><th>Scrolled 50%+</th><th>Sessions with click</th><th>Clicks</th></tr></thead><tbody>${
+     cr.map(r=>`<tr><td><b>${esc(r.creative)}</b></td><td><span class="tag">${esc(r.source)}</span></td>
+       <td>${r.sessions}</td><td>${r.uniques}</td><td>${r.avg_time}s</td>
+       <td>${r.scroll50} (${Math.round(r.scroll50/r.sessions*100)}%)</td>
+       <td>${r.engaged} (${Math.round(r.engaged/r.sessions*100)}%)</td><td>${r.clicks}</td></tr>`).join('')}</tbody></table>`;
+  bars($('#c-referrers'), Object.entries(o.referrers||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k,value:v})), {showPct:true});
+  const sb = o.scroll_buckets||[];
+  // scroll reach: number of sessions reaching >= depth
+  const reachRows = [0.25,0.5,0.75,1.0].map(d=>{
+    let c=0; sb.forEach((cnt,i)=>{ if(i/10 >= d-0.001) c+=cnt; });
+    return {label:(d*100)+'% of page', value:c};
+  });
+  bars($('#c-scroll'), reachRows, {showPct:false});
+  bars($('#c-clicks'), (o.top_clicks||[]).map(c=>({label:c.label,value:c.count})), {showPct:false});
+}
+
+// ---- heatmaps
+let CLICKDATA=null, CUR_OV='click';
+document.querySelectorAll('[data-hm]').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('[data-hm]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); CUR_OV=b.dataset.hm; renderHeat();
+  };
+});
+
+async function ensureSnapshot(){
+  const has = await api('api/has_snapshot',{site:SITE});
+  const img = $('#hm-img');
+  if(has.snapshot){
+    img.src = 'snapshot?site='+encodeURIComponent(SITE)+'&_'+Date.now();
+    img.style.display='block';
+    return new Promise(res=>{ img.onload=()=>res(true); img.onerror=()=>res(false); });
+  } else {
+    img.removeAttribute('src'); img.style.display='none';
+    return false;
+  }
+}
+
+function heatColor(v){ // v in 0..1 -> blue->green->yellow->red
+  const stops=[[43,75,214],[27,175,122],[237,161,0],[227,73,72]];
+  const t=Math.max(0,Math.min(1,v))*(stops.length-1);
+  const i=Math.floor(t), f=t-i, a=stops[i], b=stops[Math.min(i+1,stops.length-1)];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+}
+
+async function renderHeat(){
+  if(!CLICKDATA) CLICKDATA = await api('api/clicks',{site:SITE});
+  const hasSnap = await ensureSnapshot();
+  const wrap=$('#hm-wrap'), cv=$('#hm-canvas'), img=$('#hm-img');
+  let W = wrap.clientWidth || 900;
+  let H;
+  if(hasSnap && img.naturalWidth){ H = W * img.naturalHeight/img.naturalWidth; }
+  else { H = Math.round(W*1.6); wrap.style.height=H+'px'; }
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  if(CUR_OV==='scroll'){
+    const scroll = CLICKDATA.scroll||[];
+    const n = scroll.length||1;
+    const bands=60;
+    for(let b=0;b<bands;b++){
+      const y0=b/bands;
+      const reached = scroll.filter(s=>s>=y0).length / n;
+      const col=heatColor(reached);
+      ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${hasSnap?0.5:0.85})`;
+      ctx.fillRect(0, y0*H, W, H/bands+1);
+      if(Math.abs(y0*4 - Math.round(y0*4))<0.01 && y0>0){
+        ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='12px sans-serif';
+        ctx.fillText(Math.round(reached*100)+'% reach', 8, y0*H+14);
+      }
+    }
+    $('#hm-note').textContent = `${n} sessions. Warmer = more visitors scrolled that far down the page.`;
+    return;
+  }
+
+  const pts = (CUR_OV==='click'?CLICKDATA.clicks:CLICKDATA.moves)||[];
+  // accumulate intensity on an offscreen alpha buffer
+  const off=document.createElement('canvas'); off.width=W; off.height=H;
+  const octx=off.getContext('2d');
+  const R = CUR_OV==='click'?26:34;
+  octx.globalCompositeOperation='lighter';
+  pts.forEach(p=>{
+    const x=p.xp*W, y=p.yp*H;
+    const g=octx.createRadialGradient(x,y,0,x,y,R);
+    g.addColorStop(0,'rgba(0,0,0,0.28)'); g.addColorStop(1,'rgba(0,0,0,0)');
+    octx.fillStyle=g; octx.beginPath(); octx.arc(x,y,R,0,7); octx.fill();
+  });
+  const src=octx.getImageData(0,0,W,H), d=src.data;
+  let maxA=1; for(let i=3;i<d.length;i+=4) if(d[i]>maxA) maxA=d[i];
+  const out=ctx.createImageData(W,H), o=out.data;
+  for(let i=0;i<d.length;i+=4){
+    const a=d[i+3]/maxA;
+    if(a<=0.01) continue;
+    const c=heatColor(a);
+    o[i]=c[0]; o[i+1]=c[1]; o[i+2]=c[2]; o[i+3]=Math.min(235, a*255*1.3);
+  }
+  ctx.putImageData(out,0,0);
+  $('#hm-note').textContent = `${pts.length} ${CUR_OV==='click'?'clicks':'mouse-move samples'} across all sessions`
+    + (hasSnap?'':'. No page snapshot uploaded — overlay shown on a blank canvas (POST a PNG to /a/snapshot?site='+SITE+' to see it over the real page).');
+}
+
+// ---- sessions + replay
+async function loadSessions(){
+  const list = await api('api/sessions',{site:SITE});
+  const body=$('#sessions-body');
+  if(!list.length){ body.innerHTML='<div class="empty">No sessions yet</div>'; return; }
+  body.innerHTML = `<table><thead><tr>
+    <th>Started</th><th>Landing</th><th>Source</th><th>Creative</th><th>Country</th><th>Device</th><th>Referrer</th>
+    <th>Time</th><th>Scroll</th><th>Clicks</th><th>Replay</th></tr></thead><tbody>${
+    list.map(s=>`<tr>
+      <td>${new Date(s.first_ts).toLocaleString()}</td>
+      <td><span class="tag">${esc(s.site||'')}</span></td><td>${esc(s.source||'')}</td><td>${esc(s.creative||'—')}</td>
+      <td>${s.country_code?('<span class="flag">'+flagEmoji(s.country_code)+'</span>'+(s.country||s.country_code)):'—'}</td>
+      <td><span class="tag">${s.device||'?'}</span></td>
+      <td>${esc((s.referrer||'direct').slice(0,30))}</td>
+      <td>${s.time_on_page||0}s</td>
+      <td>${Math.round((s.max_scroll||0)*100)}%</td>
+      <td>${s.clicks}</td>
+      <td>${s.has_recording?`<button class="play-btn active" data-s="${esc(s.session)}" data-site="${esc(s.site||'')}">▶ Replay</button>`:'<span class="tag">no rec</span>'}</td>
+    </tr>`).join('')}</tbody></table>`;
+  body.querySelectorAll('.play-btn').forEach(b=> b.onclick=()=>replay(b.dataset.s, b.dataset.site));
+}
+
+let PLAYER=null;
+async function replay(session, site){
+  const rec = await api('api/recording',{site:(site||SITE), session});
+  const ev = rec.events||[];
+  $('#player').innerHTML='';
+  if(ev.length<2){ $('#player').innerHTML='<div class="empty">Recording too short to replay</div>'; }
+  else {
+    const w=Math.min(1000, window.innerWidth-80);
+    PLAYER = new rrwebPlayer({ target:$('#player'),
+      props:{ events:ev, width:w, height:Math.round(w*0.62), autoPlay:true, showController:true }});
+  }
+  $('#ovl-title').textContent='Session replay — '+session.slice(0,20);
+  $('#overlay').style.display='flex';
+}
+$('#ovl-close').onclick=()=>{ $('#overlay').style.display='none'; $('#player').innerHTML=''; };
+
+async function loadAll(){
+  CLICKDATA=null;
+  await loadOverview();
+  await loadSessions();
+  if(!$('#tab-heatmap').classList.contains('hidden')) renderHeat();
+}
+$('#refresh').onclick=loadAll;
+$('#site').value=SITE;
+
+async function applyDeepLink(){
+  const tab = qs.get('tab');
+  if(tab){
+    const b=document.querySelector(`.tabs button[data-tab="${tab}"]`);
+    if(b) b.click();
+  }
+  const hm = qs.get('hm');
+  if(hm){ const b=document.querySelector(`[data-hm="${hm}"]`); if(b) b.click(); }
+  const rep = qs.get('replay');
+  if(rep==='first'){
+    const b=document.querySelector('.play-btn[data-s]'); if(b) b.click();
+  } else if(rep){ replay(rep); }
+}
+
+(async()=>{ await loadSites(); if(SITE){ await loadAll(); await applyDeepLink(); } })();
+window.addEventListener('resize',()=>{ if(!$('#tab-heatmap').classList.contains('hidden')) renderHeat(); });
+</script>
+</body>
+</html>
